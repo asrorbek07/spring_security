@@ -1,0 +1,15 @@
+#spring.datasource.url=jdbc:postgresql://localhost:5432/springsecuritydb
+#spring.datasource.driver-class-name=
+#spring.datasource.username=postgres
+#spring.datasource.password=dbkey
+#spring.jpa.show-sql=true
+#spring.jpa.hibernate.ddl-auto=update
+#spring.jpa.properties.hibernate.format_sql=true
+#spring.jpa.database=postgresql
+#spring.jpa.database-platform=org.hibernate.dialect.PostgeSQLDialect
+spring:
+  data:
+    mongodb:
+      username: mongo
+      password: dbkey
+      uri: mongodb://localhost:27017/admin
