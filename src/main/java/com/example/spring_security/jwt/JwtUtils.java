@@ -4,11 +4,11 @@ import com.example.spring_security.entity.UserEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
+@Component
 public class JwtUtils {
     private final static String jwtAccessKey = "thisIsTheSecretKey";
     private final static String jwtRefreshKey = "thisIsTheRefreshKey";
@@ -57,7 +57,8 @@ public class JwtUtils {
             e.printStackTrace();
             return null;
         }
-    }private static synchronized Claims getRefreshTokenClaim(String token) {
+    }
+    private static synchronized Claims getRefreshTokenClaim(String token) {
         try {
             return Jwts.parser().setSigningKey(jwtRefreshKey).parseClaimsJws(token).getBody();
         } catch (Exception e) {
