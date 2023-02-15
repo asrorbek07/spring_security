@@ -4,6 +4,7 @@ import com.example.spring_security.dto.*;
 import com.example.spring_security.entity.UserEntity;
 import com.example.spring_security.jwt.JwtUtils;
 import com.example.spring_security.repository.UserRepository;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -21,6 +23,7 @@ public class UserService implements BaseService<UserRequestDto,String> {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
 
     @Override
     public ApiResponse add(UserRequestDto userRequestDto) {
@@ -80,13 +83,13 @@ public class UserService implements BaseService<UserRequestDto,String> {
         if (!userRepositoryByUsername.isPresent()||!passwordEncoder.matches(userLoginRequestDto.getPassword(), userRepositoryByUsername.get().getPassword()))
             return new ApiResponse(ResponseMessage.ERROR_USER_NOT_FOUND.getStatusCode(), ResponseMessage.ERROR_USER_NOT_FOUND.getMessage());
         UserEntity userEntity = userRepositoryByUsername.get();
-//        String accessToken = JwtUtils.generateAccessToken(userEntity);
-//        String refreshToken = JwtUtils.generateRefreshToken(userEntity);
-//        UserLoginResponseDto userLoginResponseDto = UserLoginResponseDto.builder()
-//                .accessToken(accessToken)
-//                .refreshToken(refreshToken)
-//                .build();
-        return new ApiResponse(ResponseMessage.SUCCESS.getStatusCode(), ResponseMessage.SUCCESS.getMessage(),getUserResponseDto(userEntity));
+        String accessToken = JwtUtils.generateAccessToken(userEntity);
+        String refreshToken = JwtUtils.generateRefreshToken(userEntity);
+        UserLoginResponseDto userLoginResponseDto = UserLoginResponseDto.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+        return new ApiResponse(ResponseMessage.SUCCESS.getStatusCode(), ResponseMessage.SUCCESS.getMessage(),userLoginResponseDto);
     }
 
 
@@ -119,6 +122,24 @@ public class UserService implements BaseService<UserRequestDto,String> {
         Optional<UserEntity> optionalUserEntity = userRepository.findByUsername(username);
         if (!optionalUserEntity.isPresent())  return new ApiResponse(ResponseMessage.ERROR_USER_NOT_FOUND.getStatusCode(), ResponseMessage.ERROR_USER_NOT_FOUND.getMessage());
         return new ApiResponse(ResponseMessage.SUCCESS.getStatusCode(),ResponseMessage.SUCCESS.getMessage(), getUserResponseDto(optionalUserEntity.get()));
+    }
+
+    public ApiResponse getAccessToken(String refreshToken) {
+        Claims claims = JwtUtils.isRefreshTokenValid(refreshToken);
+        if (claims != null) {
+            String username = claims.getSubject();
+            UserEntity userEntity = userRepository.findByUsername(username).get();
+            if (userEntity != null) {
+                return new ApiResponse(
+                        0,
+                        "success",
+                        Map.of(
+                                "access_token", JwtUtils.generateAccessToken(userEntity)
+                        )
+                );
+            }
+        }
+        return null;
     }
 }
 

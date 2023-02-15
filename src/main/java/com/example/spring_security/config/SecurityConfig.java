@@ -1,5 +1,6 @@
 package com.example.spring_security.config;
 
+import com.example.spring_security.filter.JwtFilter;
 import com.example.spring_security.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -11,8 +12,10 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -21,24 +24,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
+    private final JwtFilter jwtFilter;
 
 
-//    @Bean
-//    protected UserDetailsService userDetailsService() {
-//        UserDetails asror = User.builder()
-//                .username("asror")
-//                .password(passwordEncoder.encode("asror"))
-//                .roles("ADMIN")
-//                .build();
-//
-//        UserDetails jasur = User.builder()
-//                .username("jasur")
-//                .password(passwordEncoder.encode("jasur"))
-//                .roles("USER")
-//                .build();
-//
-//        return new InMemoryUserDetailsManager(asror,jasur);
-//    }
 
     @Bean
     public AuthenticationProvider authenticationProvider(){
@@ -61,10 +49,15 @@ public class SecurityConfig {
         http.csrf()
                 .disable()
                 .authorizeHttpRequests()
-                .requestMatchers("/api/user/**").permitAll()
+                .requestMatchers(HttpMethod.GET,"/api/user/login",
+                                                "/api/user/getAccessToken").permitAll()
+                .requestMatchers(HttpMethod.POST,"/api/user/add").permitAll()
                 .anyRequest()
                 .authenticated()
                 .and()
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic();
         return http.build();
     }

@@ -45,9 +45,9 @@ public class JwtUtils {
         return getRefreshTokenClaim(token);
     }
 
-    public static List<String> getAuthorities(Claims claims) {
-        return (List<String>) claims.get("authorities");
-    }
+//    public static List<String> getAuthorities(Claims claims) {
+//        return (List<String>) claims.get("authorities");
+//    }
 
 
     private static synchronized Claims getAccessTokenClaim(String token) {

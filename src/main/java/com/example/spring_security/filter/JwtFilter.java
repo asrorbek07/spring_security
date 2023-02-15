@@ -1,5 +1,6 @@
 package com.example.spring_security.filter;
 
+import com.example.spring_security.entity.UserEntity;
 import com.example.spring_security.jwt.JwtUtils;
 import com.example.spring_security.repository.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -9,16 +10,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 @Component
 @RequiredArgsConstructor
@@ -43,24 +43,19 @@ public class JwtFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        List<String> authorities = JwtUtils.getAuthorities(claims);
+        UserEntity userEntity = userRepository.findByUsername(claims.getSubject()).get();
+        Collection<? extends GrantedAuthority> authorities = userEntity.getAuthorities();
 
-        authenticateUser(claims, authorities);
+        authenticateUser(userEntity,request);
 
         filterChain.doFilter(request, response);
     }
 
-    public void authenticateUser(Claims claims, List<String> authorities){
-        Authentication authentication =
-                new UsernamePasswordAuthenticationToken(claims.getSubject(), getAuthorities(authorities));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+    public void authenticateUser(UserEntity userEntity, HttpServletRequest request){
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(userEntity, null, userEntity.getAuthorities());
+        authenticationToken.setDetails(new WebAuthenticationDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
     }
 
-    private List<SimpleGrantedAuthority> getAuthorities(List<String> permissions){
-        List<SimpleGrantedAuthority> permissionList = new ArrayList<>();
-        permissions.forEach((role)->{
-            permissionList.add(new SimpleGrantedAuthority(role));
-        });
-        return permissionList;
-    }
 }
