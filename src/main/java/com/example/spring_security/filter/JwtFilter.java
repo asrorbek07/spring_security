@@ -2,7 +2,10 @@ package com.example.spring_security.filter;
 
 import com.example.spring_security.entity.UserEntity;
 import com.example.spring_security.jwt.JwtUtils;
+import com.example.spring_security.redis.UserSession;
+import com.example.spring_security.redis.UserSessionRedisRepository;
 import com.example.spring_security.repository.UserRepository;
+import com.google.gson.Gson;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -25,6 +28,8 @@ import java.util.Collection;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final UserRepository userRepository;
+    private  final UserSessionRedisRepository userSessionRedisRepository;
+    private  final Gson gson;
 
     @Override
     protected void doFilterInternal(
@@ -43,8 +48,9 @@ public class JwtFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        UserEntity userEntity = userRepository.findByUsername(claims.getSubject()).get();
-        Collection<? extends GrantedAuthority> authorities = userEntity.getAuthorities();
+        String uuid = claims.getSubject();
+        UserSession userSession = userSessionRedisRepository.findById(uuid).get();
+        UserEntity userEntity = gson.fromJson(userSession.getUserInfo(), UserEntity.class);
 
         authenticateUser(userEntity,request);
 

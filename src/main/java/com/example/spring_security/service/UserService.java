@@ -2,8 +2,12 @@ package com.example.spring_security.service;
 
 import com.example.spring_security.dto.*;
 import com.example.spring_security.entity.UserEntity;
+import com.example.spring_security.jwt.JsonHelper;
 import com.example.spring_security.jwt.JwtUtils;
+import com.example.spring_security.redis.UserSession;
+import com.example.spring_security.redis.UserSessionRedisRepository;
 import com.example.spring_security.repository.UserRepository;
+import com.google.gson.Gson;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -14,6 +18,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.logging.StreamHandler;
 import java.util.stream.Collectors;
 
 
@@ -23,6 +29,8 @@ public class UserService implements BaseService<UserRequestDto,String> {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private  final JsonHelper jsonHelper;
+    private final UserSessionRedisRepository userSessionRedisRepository;
 
 
     @Override
@@ -83,8 +91,22 @@ public class UserService implements BaseService<UserRequestDto,String> {
         if (!userRepositoryByUsername.isPresent()||!passwordEncoder.matches(userLoginRequestDto.getPassword(), userRepositoryByUsername.get().getPassword()))
             return new ApiResponse(ResponseMessage.ERROR_USER_NOT_FOUND.getStatusCode(), ResponseMessage.ERROR_USER_NOT_FOUND.getMessage());
         UserEntity userEntity = userRepositoryByUsername.get();
-        String accessToken = JwtUtils.generateAccessToken(userEntity);
-        String refreshToken = JwtUtils.generateRefreshToken(userEntity);
+        String json = jsonHelper.getString(userEntity);
+        UserSession userSession=null;
+        Optional<UserSession> optionalUserSession = userSessionRedisRepository.findFirstByUserInfo(json);
+        if (!optionalUserSession.isPresent()) {
+            String uuid = UUID.randomUUID().toString();
+            userSession = UserSession.builder()
+                .id(uuid)
+                .userInfo(json)
+                .build();
+        userSessionRedisRepository.save(userSession);
+        } else{
+            userSession=optionalUserSession.get();
+        }
+
+        String accessToken = JwtUtils.generateAccessToken(userSession.getId());
+        String refreshToken = JwtUtils.generateRefreshToken(userSession.getId());
         UserLoginResponseDto userLoginResponseDto = UserLoginResponseDto.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -127,14 +149,16 @@ public class UserService implements BaseService<UserRequestDto,String> {
     public ApiResponse getAccessToken(String refreshToken) {
         Claims claims = JwtUtils.isRefreshTokenValid(refreshToken);
         if (claims != null) {
-            String username = claims.getSubject();
-            UserEntity userEntity = userRepository.findByUsername(username).get();
+            String uuid = claims.getSubject();
+            Optional<UserSession> byId = userSessionRedisRepository.findById(uuid);
+            String userInfo = byId.get().getUserInfo();
+            UserEntity userEntity = jsonHelper.getUserEntity(userInfo);
             if (userEntity != null) {
                 return new ApiResponse(
                         0,
                         "success",
                         Map.of(
-                                "access_token", JwtUtils.generateAccessToken(userEntity)
+                                "access_token", JwtUtils.generateAccessToken(uuid)
                         )
                 );
             }

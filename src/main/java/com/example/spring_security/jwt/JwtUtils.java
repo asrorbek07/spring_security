@@ -1,13 +1,12 @@
 package com.example.spring_security.jwt;
 
-import com.example.spring_security.entity.UserEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
-import java.util.List;
+
 @Component
 public class JwtUtils {
     private final static String jwtAccessKey = "thisIsTheSecretKey";
@@ -16,24 +15,22 @@ public class JwtUtils {
     private final static long expirationTimeOfRefreshToken = 7200000;
 
     public static synchronized String generateAccessToken(
-            UserEntity userDetails
+            String uuid
     ) {
         return Jwts.builder()
                 .signWith(SignatureAlgorithm.HS512, jwtAccessKey)
-                .setSubject(userDetails.getUsername())
+                .setSubject(uuid)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(new Date().getTime() + expirationTimeOfAccessToken))
-                .claim("authorities", userDetails.getAuthorities())
                 .compact();
     }public static synchronized String generateRefreshToken(
-            UserEntity userDetails
+            String uuid
     ) {
         return Jwts.builder()
                 .signWith(SignatureAlgorithm.HS512, jwtRefreshKey)
-                .setSubject(userDetails.getUsername())
+                .setSubject(uuid)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(new Date().getTime() + expirationTimeOfRefreshToken))
-                .claim("authorities", userDetails.getAuthorities())
                 .compact();
     }
 
