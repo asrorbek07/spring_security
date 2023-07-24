@@ -48,6 +48,7 @@ public class JwtFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+
         String uuid = claims.getSubject();
         UserSession userSession = userSessionRedisRepository.findById(uuid).get();
         UserEntity userEntity = gson.fromJson(userSession.getUserInfo(), UserEntity.class);
